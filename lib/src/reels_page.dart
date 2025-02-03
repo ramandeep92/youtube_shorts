@@ -1,14 +1,11 @@
 import 'package:card_swiper/card_swiper.dart';
-import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:reels_viewer/src/models/reel_model.dart';
 import 'package:reels_viewer/src/utils/url_checker.dart';
-import 'package:video_player/video_player.dart';
-import 'components/like_icon.dart';
-import 'components/screen_options.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class ReelsPage extends StatefulWidget {
-  final ReelModel item;
+  final Reel item;
   final bool showVerifiedTick;
   final Function(String)? onShare;
   final Function(String)? onLike;
@@ -35,42 +32,44 @@ class ReelsPage extends StatefulWidget {
 }
 
 class _ReelsPageState extends State<ReelsPage> {
-  late VideoPlayerController _videoPlayerController;
-  ChewieController? _chewieController;
-  bool _liked = false;
+  YoutubePlayerController? _activeController;
   @override
   void initState() {
     super.initState();
-    if (!UrlChecker.isImageUrl(widget.item.url) &&
-        UrlChecker.isValid(widget.item.url)) {
+    if (!UrlChecker.isImageUrl(widget.item.thumbnailUrl) &&
+        UrlChecker.isValid(widget.item.thumbnailUrl)) {
       initializePlayer();
     }
   }
 
   Future initializePlayer() async {
-    _videoPlayerController = VideoPlayerController. networkUrl(Uri.parse(widget.item.url));
-    await Future.wait([_videoPlayerController.initialize()]);
-    _chewieController = ChewieController(
-      videoPlayerController: _videoPlayerController,
-      autoPlay: true,
-      showControls: false,
-      looping: false,
-    );
-    setState(() {});
-    _videoPlayerController.addListener(() {
-      if (_videoPlayerController.value.position ==
-          _videoPlayerController.value.duration) {
-        widget.swiperController.next();
-      }
-    });
+    // await Future.wait([_activeController?.dispose()] as Iterable<Future>);
+    _activeController = YoutubePlayerController(
+      initialVideoId: widget.item.reelId,
+      flags: YoutubePlayerFlags(
+        autoPlay: true,
+        mute: false,
+        controlsVisibleAtStart: false,
+        hideControls: false,
+        disableDragSeek: false,
+        enableCaption: false,
+        forceHD: false,
+        loop: true,
+      ),
+    )..addListener(_videoListener);
+  }
+
+  void _videoListener() {
+    if (_activeController == null) return;
+    if (_activeController!.value.hasError) {
+      _activeController?.reload();
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
-    _videoPlayerController.dispose();
-    if (_chewieController != null) {
-      _chewieController!.dispose();
-    }
+    _activeController?.dispose();
     super.dispose();
   }
 
@@ -83,33 +82,30 @@ class _ReelsPageState extends State<ReelsPage> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        _chewieController != null &&
-                _chewieController!.videoPlayerController.value.isInitialized
+        _activeController != null && _activeController!.value.isReady
             ? FittedBox(
                 fit: BoxFit.cover,
                 child: SizedBox(
                   width: MediaQuery.of(context).size.width,
                   height: MediaQuery.of(context).size.height,
-                  child: GestureDetector(
-                    onDoubleTap: () {
-                      if (!widget.item.isLiked) {
-                        _liked = true;
-                        if (widget.onLike != null) {
-                          widget.onLike!(widget.item.url);
-                        }
-                        setState(() {});
-                      }
-                    },
-                    onTap: (){
-                      if(_videoPlayerController.value.isPlaying){
-                        _videoPlayerController.pause();
-                      }else{
-                        _videoPlayerController.play();
-                      }
-                    },
-                    child: Chewie(
-                      controller: _chewieController!,
+                  child: YoutubePlayer(
+                    actionsPadding: EdgeInsets.zero,
+                    controller: _activeController!,
+                    showVideoProgressIndicator: false,
+                    controlsTimeOut: Duration(microseconds: 10),
+                    progressIndicatorColor: Colors.transparent,
+                    progressColors: const ProgressBarColors(
+                      playedColor: Colors.transparent,
+                      handleColor: Colors.transparent,
                     ),
+                    onReady: () {
+                      _activeController?.play();
+                      setState(() {});
+                    },
+                    onEnded: (metaData) {
+                      _activeController?.reload();
+                      setState(() {});
+                    },
                   ),
                 ),
               )
@@ -121,34 +117,40 @@ class _ReelsPageState extends State<ReelsPage> {
                   Text('Loading...')
                 ],
               ),
-        if (_liked)
-          const Center(
-            child: LikeIcon(),
-          ),
-        if (widget.showProgressIndicator)
-          Positioned(
-            bottom: 0,
-            width: MediaQuery.of(context).size.width,
-            child: VideoProgressIndicator(
-              _videoPlayerController,
-              allowScrubbing: false,
-              colors: const VideoProgressColors(
-                backgroundColor: Colors.blueGrey,
-                bufferedColor: Colors.blueGrey,
-                playedColor: Colors.blueAccent,
-              ),
+        _buildVideoDetails(MediaQuery.of(context).size),
+      ],
+    );
+  }
+
+  Widget _buildVideoDetails(Size size) {
+    final reel = widget.item;
+    return Padding(
+      padding: EdgeInsets.all(size.width * 0.04),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(100),
+            child: Image.network(
+              widget.item.thumbnailUrl,
+              width: size.width * 0.15,
+              height: size.width * 0.15,
+              fit: BoxFit.cover,
             ),
           ),
-        ScreenOptions(
-          onClickMoreBtn: widget.onClickMoreBtn,
-          onComment: widget.onComment,
-          onFollow: widget.onFollow,
-          onLike: widget.onLike,
-          onShare: widget.onShare,
-          showVerifiedTick: widget.showVerifiedTick,
-          item: widget.item,
-        )
-      ],
+          SizedBox(width: size.width * 0.04),
+          Expanded(
+            child: Text(
+              widget.item.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

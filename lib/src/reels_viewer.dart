@@ -5,7 +5,7 @@ import 'package:reels_viewer/src/reels_page.dart';
 
 class ReelsViewer extends StatefulWidget {
   /// use reel model and provide list of reels, list contains reels object, object contains url and other parameters
-  final List<ReelModel> reelsList;
+  final List<Reel> reelsList;
 
   /// use to show/hide verified tick, by default true
   final bool showVerifiedTick;

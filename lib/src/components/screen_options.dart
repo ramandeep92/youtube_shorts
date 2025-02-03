@@ -6,7 +6,7 @@ import 'package:reels_viewer/src/utils/convert_numbers_to_short.dart';
 import 'comment_bottomsheet.dart';
 
 class ScreenOptions extends StatelessWidget {
-  final ReelModel item;
+  final Reel item;
   final bool showVerifiedTick;
   final Function(String)? onShare;
   final Function(String)? onLike;
@@ -46,15 +46,15 @@ class ScreenOptions extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        if (item.profileUrl != null)
-                          UserProfileImage(profileUrl: item.profileUrl??''),
-                        if (item.profileUrl == null)
+                        if (item.thumbnailUrl != null)
+                          UserProfileImage(profileUrl: item.thumbnailUrl ?? ''),
+                        if (item.thumbnailUrl == null)
                           const CircleAvatar(
                             child: Icon(Icons.person, size: 18),
                             radius: 16,
                           ),
                         const SizedBox(width: 6),
-                        Text(item.userName,
+                        Text(item.title,
                             style: const TextStyle(color: Colors.white)),
                         const SizedBox(width: 10),
                         if (showVerifiedTick)
@@ -77,11 +77,11 @@ class ScreenOptions extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(width: 6),
-                    if (item.reelDescription != null)
-                      Text(item.reelDescription ?? '',
+                    if (item.description != null)
+                      Text(item.description ?? '',
                           style: const TextStyle(color: Colors.white)),
                     const SizedBox(height: 10),
-                    if (item.musicName != null)
+                    if (item.title != null)
                       Row(
                         children: [
                           const Icon(
@@ -90,7 +90,7 @@ class ScreenOptions extends StatelessWidget {
                             color: Colors.white,
                           ),
                           Text(
-                            'Original Audio - ${item.musicName}',
+                            'Original Audio - ${item.title}',
                             style: const TextStyle(color: Colors.white),
                           ),
                         ],
@@ -98,52 +98,6 @@ class ScreenOptions extends StatelessWidget {
                   ],
                 ),
               ),
-              Column(
-                children: [
-                  if (onLike != null && !item.isLiked)
-                    IconButton(
-                      icon: const Icon(Icons.favorite_outline,
-                          color: Colors.white),
-                      onPressed: () => onLike!(item.url),
-                    ),
-                  if (item.isLiked)
-                    const Icon(Icons.favorite_rounded, color: Colors.red),
-                  Text(NumbersToShort.convertNumToShort(item.likeCount),
-                      style: const TextStyle(color: Colors.white)),
-                  const SizedBox(height: 20),
-                  IconButton(
-                    icon:
-                        const Icon(Icons.comment_rounded, color: Colors.white),
-                    onPressed: () {
-                  if(onComment!=null)  {  showModalBottomSheet(
-                        barrierColor: Colors.transparent,
-                        context: context,
-                        builder: (ctx) => CommentBottomSheet(commentList: item.commentList??[],onComment: onComment)
-                      );}
-                    },
-                  ),
-                  Text(NumbersToShort.convertNumToShort(item.commentList?.length??0), style: const TextStyle(color: Colors.white)),
-                  const SizedBox(height: 20),
-                  if (onShare != null)
-                    InkWell(
-                      onTap: () => onShare!(item.url),
-                      child: Transform(
-                        transform: Matrix4.rotationZ(5.8),
-                        child: const Icon(
-                          Icons.send,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 20),
-                  if (onClickMoreBtn != null)
-                    IconButton(
-                      icon: const Icon(Icons.more_vert),
-                      onPressed: onClickMoreBtn!,
-                      color: Colors.white,
-                    ),
-                ],
-              )
             ],
           ),
         ],
